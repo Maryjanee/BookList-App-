@@ -1,103 +1,113 @@
-class Book {
-  constructor(title, author, isbn) {
-    this.title = title;
+const form = document.querySelector("form");
+const bookList = document.querySelector("#book-list");
+
+class Book{
+  constructor(name, author, isbn){
+    this.name = name;
     this.author = author;
     this.isbn = isbn;
   }
 }
+class Ui{
+  addBook(book){
+  const tableBody = document.querySelector('tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<th>${book.name}</th>
+  <th>${book.author}</th>
+  <th>${book.isbn}</th>
+  <th><i class="fas fa-trash-alt"></i></th>`;
+  tableBody.appendChild(tr);
+}
 
-class UI {
-  addBookToList(book) {
-    const list = document.getElementById("book-list");
-    // Create tr element
-    const row = document.createElement("tr");
-    // Insert cols
-    row.innerHTML = `
-      <td>${book.title}</td>
-      <td>${book.author}</td>
-      <td>${book.isbn}</td>
-      <td><a href="#" class="delete">X<a></td>
-    `;
+clearFields(name, author,isbn){
+  name.value = "";
+  author.value = "";
+  isbn.value = "";
+}
+showAlert(message, alertClass){
+  const container = document.querySelector(".container");
+  const form = document.querySelector("form");
+  const divEl = document.createElement('div');
+  const text = document.createTextNode(message);
+  divEl.classList.add(alertClass);
+  divEl.appendChild(text);
+  container.insertBefore(divEl, form);
+  setTimeout(()=> divEl.remove(), 2000);
+}
 
-    list.appendChild(row);
-  }
 
-  showAlert(message, className) {
-    // Create div
-    const div = document.createElement("div");
-    // Add classes
-    div.className = `alert ${className}`;
-    // Add text
-    div.appendChild(document.createTextNode(message));
-    // Get parent
-    const container = document.querySelector(".container");
-    // Get form
-    const form = document.querySelector("#book-form");
-    // Insert alert
-    container.insertBefore(div, form);
+//Local storage Class
 
-    // Timeout after 3 sec
-    setTimeout(function() {
-      document.querySelector(".alert").remove();
-    }, 3000);
-  }
-
-  deleteBook(target) {
-    if (target.className === "delete") {
-      target.parentElement.parentElement.remove();
+class Store {
+  static getBooks() {
+    let books;
+    if(localStorage.getItem('books') === null) {
+      books = [];
+    } else {
+      books = JSON.parse(localStorage.getItem('books'));
     }
+
+    return books;
   }
 
-  clearFields() {
-    document.getElementById("title").value = "";
-    document.getElementById("author").value = "";
-    document.getElementById("isbn").value = "";
+  static displayBooks() {
+    const books = Store.getBooks();
+
+    books.forEach(function(book){
+      const ui  = new UI;
+
+      // Add book to UI
+      ui.addBookToList(book);
+    });
+  }
+
+  static addBook(book) {
+    const books = Store.getBooks();
+
+    books.push(book);
+
+    localStorage.setItem('books', JSON.stringify(books));
+  }
+
+  static removeBook(isbn) {
+    const books = Store.getBooks();
+
+    books.forEach(function(book, index){
+     if(book.isbn === isbn) {
+      books.splice(index, 1);
+     }
+    });
+
+    localStorage.setItem('books', JSON.stringify(books));
   }
 }
 
-// Event Listener for add book
-document.getElementById("book-form").addEventListener("submit", function(e) {
-  // Get form values
-  const title = document.getElementById("title").value,
-    author = document.getElementById("author").value,
-    isbn = document.getElementById("isbn").value;
+form.addEventListener('submit', (e) => {
+  const ui = new Ui;
+  const name = document.querySelector('#name');
+  const author = document.querySelector("#author");
+  const isbn = document.querySelector('#isbn');
+  if(name.value == "" || author.value == "" || isbn.value == ""){
+    ui.showAlert("One or more Field's empty", "error");
+  }else{
+    const newBook = new Book(name.value,author.value,isbn.value);
+    Store.addBook(newBook);
+    ui.addBook(newBook);
 
-  // Instantiate book
-  const book = new Book(title, author, isbn);
-
-  // Instantiate UI
-  const ui = new UI();
-
-  console.log(ui);
-
-  // Validate
-  if (title === "" || author === "" || isbn === "") {
-    // Error alert
-    ui.showAlert("Please fill in all fields", "error");
-  } else {
-    // Add book to list
-    ui.addBookToList(book);
-
-    // Show success
-    ui.showAlert("Book Added!", "success");
-
-    // Clear fields
-    ui.clearFields();
+    ui.clearFields(name,author,isbn);
+    ui.showAlert("Book Added", "success");
   }
-
   e.preventDefault();
-});
+})
 
-// Event Listener for delete
-document.getElementById("book-list").addEventListener("click", function(e) {
-  // Instantiate UI
-  const ui = new UI();
+bookList.addEventListener("click", (e)=>{
+  const ui = new Ui;
+  e.preventDefault()
+  if(e.target.classList == "fas fa-trash-alt"){
+    e.target.parentElement.parentElement.remove();
+    Store.removeBook(e.target.parentElement.previousElementSibling.textContent);
 
-  // Delete book
-  ui.deleteBook(e.target);
+    ui.showAlert("Book Removed", "error");
 
-  // Show message
-  ui.showAlert("Book Removed!", "success");
-
-  e.preventDefault();
-});
+  }
+})
